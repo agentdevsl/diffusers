@@ -166,7 +166,13 @@ class TransformerBlockSkipHook(ModelHook):
                 original_encoder_hidden_states = self._metadata._get_parameter_from_args_kwargs(
                     "encoder_hidden_states", args, kwargs
                 )
-                output = (original_hidden_states, original_encoder_hidden_states)
+                max_idx = max(
+                    self._metadata.return_hidden_states_index, self._metadata.return_encoder_hidden_states_index
+                )
+                ret_list = [None] * (max_idx + 1)
+                ret_list[self._metadata.return_hidden_states_index] = original_hidden_states
+                ret_list[self._metadata.return_encoder_hidden_states_index] = original_encoder_hidden_states
+                output = tuple(ret_list)
         else:
             output = self.fn_ref.original_forward(*args, **kwargs)
             output = torch.nn.functional.dropout(output, p=self.dropout)
