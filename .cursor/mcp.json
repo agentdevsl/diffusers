@@ -1,0 +1,13 @@
+{
+  "//": "STRETCH / optional. Slot for a scoped library-docs MCP server exposing diffusers' prose API docs as",
+  "//2": "searchable context. It is intentionally empty: the core 'don't read the whole codebase' need is met",
+  "//3": "by Cursor's codebase index (semantic exemplar retrieval, scoped by .cursorignore). Add a docs server",
+  "//4": "here only if prose-doc search proves necessary. Example shape (disabled):",
+  "//example": {
+    "diffusers-docs": {
+      "command": "npx",
+      "args": ["-y", "@example/docs-mcp", "--root", "docs/source/en"]
+    }
+  },
+  "mcpServers": {}
+}

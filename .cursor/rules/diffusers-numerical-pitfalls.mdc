@@ -1,0 +1,24 @@
+---
+description: Numerical-parity traps (dtype / RNG / RoPE / sigma) when porting a reference impl to diffusers
+globs: src/diffusers/models/transformers/**, src/diffusers/pipelines/**
+alwaysApply: false
+---
+
+# Numerical discrepancy pitfalls — load at write time, not just review time
+
+Authoritative source: `.ai/skills/model-integration/pitfalls.md`
+— the 12-item catalog of things that have made a diffusers port's outputs diverge from the reference. It is a
+**consult-on-mismatch reference, not a checklist** (most items won't apply to any given model); the file says so
+itself. Read it there — do not restate it here.
+
+This rule exists only to pull that catalog into context at the moment the bugs get *written* — in a transformer
+`forward` or a pipeline `__call__` denoising loop — instead of after a parity mismatch surfaces in review (where
+`.ai/review-rules.md` already links it). The traps cluster in a few places worth keeping in mind while editing:
+
+- **dtype of latents / noise / RoPE positions / timesteps** — a ~1e-2 mismatch (float32 vs bfloat16) looks
+  harmless but compounds through the denoising loop via 1/sigma amplification into broken output (catalog #2, #5, #9, #10, #11).
+- **RNG & seeding** — global CPU RNG vs `torch.Generator`; `patch_size` threaded into noise generation (#1, #4).
+- **state across stages** — scheduler accumulators and guider state that must be reset/restored (#6, #8).
+- **config & semantics** — published-checkpoint config overriding code defaults; off-by-one guidance-step mapping (#3, #12).
+
+When outputs don't match the reference, open the catalog and compare against it line by line — don't guess.

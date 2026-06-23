@@ -1,0 +1,22 @@
+---
+description: How to write a diffusers pipeline (DiffusionPipeline, register_modules, __call__)
+globs: src/diffusers/pipelines/**
+alwaysApply: false
+---
+
+# diffusers pipelines
+
+Authoritative source: `.ai/pipelines.md` (standard-pipeline conventions, file structure, gotchas);
+`.ai/pipelines.md` opens by saying modular is **preferred for new pipelines** — see `.ai/modular.md` for
+modular conventions. Defer to them for subsystem specifics;
+see `AGENTS.md` (= `.ai/AGENTS.md`) for style/formatting and the `# Copied from` mechanism. Scaffold by
+comparison rather than from memory — copy the closest reference and follow `.ai/pipelines.md` for the
+`__call__` shape, helper conventions, and gotchas:
+```python
+# reference shape only — see .ai/pipelines.md for the conventions and gotchas
+class XxxPipeline(DiffusionPipeline):                   # cf. pipeline_flux.py / pipeline_wan.py
+    @torch.no_grad()
+    def __call__(self, ...): ...
+```
+Register imports per `diffusers-structure`; add a `PipelineTesterMixin` test per `diffusers-tests`; reuse
+shared blocks via `# Copied from` (see `diffusers-copied-from`).

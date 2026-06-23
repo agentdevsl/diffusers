@@ -1,0 +1,52 @@
+---
+description: How to author and maintain Cursor rules — the standard for editing .cursor/rules/*.mdc
+globs: .cursor/rules/*.mdc
+alwaysApply: false
+---
+
+# Authoring Cursor rules (rules for rules)
+
+You're editing the rulebook — the pack's thin enforcement layer over the library's conventions. Hold these
+edits to the same bar the rules hold code to. This rule is the authoring rubric — the checklist below is the
+standard `improve` / `doc-author` hold a proposed rule to.
+
+- **Pick the type by frontmatter, deliberately.** `alwaysApply: true` = Always (every chat — use sparingly).
+  `globs` set = Auto-Attached (default for a path-scoped convention). `description` only = Agent-Requested (the
+  description IS the trigger — a specific retrieval query). Neither = Manual (@-mention only). The type must
+  match what the `description` promises: a description naming a path scope but with empty `globs` silently
+  becomes a Manual rule that never auto-loads.
+- **`globs` is a comma-separated string** (`src/diffusers/schedulers/scheduling_*.py`), never a YAML list or
+  bracketed. Use the *tightest* pattern — glob a shared filename prefix, not the whole directory — and confirm
+  it resolves (`git ls-files <glob>` returns only files the rule governs). A glob that matches nothing silently
+  disables the rule.
+- **One rule, one job.** If it covers two subsystems or you reach for "also", split it into composable rules.
+- **Code-first + cited.** Point at the **authoritative source** — the library's `.ai/<doc>` where one exists
+  (`.ai/models.md`, `.ai/pipelines.md`, `.ai/modular.md`, `.ai/AGENTS.md`), or the real reference source files
+  in `src/diffusers/...` / `tests/...` where it doesn't — and **don't restate it**. Cite a real path that
+  resolves. Tie it to a check: an existing `make`/`utils/check_*.py`/base test class, or a one-line **grep
+  invariant** that scans the rule's *whole* glob and **names the violators** (`grep -rL <conform> <glob>` empty
+  = all conform). Run the check before you commit it; write the output it actually prints. Show one example
+  that exhibits the rule's specific invariant.
+- **Run the invariant; paste its real output before committing.** An unexecuted invariant doesn't go in — a
+  check that asserts "empty = all conform" but actually names violators is self-falsifying and disqualifies the
+  rule. Execute it against the live tree and confirm the output matches what the rule claims.
+- **Don't duplicate.** Never restate a convention the library's `.ai/` docs already document — link to it.
+  `grep` existing rules + the `.ai/` docs before adding; edit the right rule instead of spawning an over-fit
+  new one.
+- **`improve` owns the rulebook.** Rule changes go through `improve` and are **human-approved** — never
+  silently rewrite them. Durable lessons are proposed *upstream* to the library's `.ai/` guides where the
+  convention belongs there (mirroring `.ai/review-rules.md`'s documentation flywheel).
+
+Canonical shape of a well-formed Auto-Attached rule:
+```mdc
+---
+description: diffusers scheduler output dataclass — a BaseOutput subclass
+globs: src/diffusers/schedulers/scheduling_*.py
+alwaysApply: false
+---
+# Scheduler output dataclass
+Authoritative source: real reference `scheduling_ddim.py` (`DDIMSchedulerOutput`); style per `.ai/AGENTS.md`.
+A scheduler's `step` returns a `BaseOutput` subclass: the shared `SchedulerOutput` (`scheduling_utils.py`)
+OR its own `*SchedulerOutput`. Falsifiable check (empty = all conform):
+`grep -L "SchedulerOutput" src/diffusers/schedulers/scheduling_*.py | grep -v _flax`
+```

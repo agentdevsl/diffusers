@@ -1,0 +1,28 @@
+---
+description: The "# Copied from" consistency mechanism — syntax, and check-mode vs auto-fix
+globs: src/diffusers/**
+alwaysApply: false
+---
+
+# `# Copied from` — duplication kept honest
+
+Authoritative source: `.ai/AGENTS.md` → "Copied Code" ("Do not edit a `# Copied from` block directly — run
+`make fix-copies` to propagate changes from the source; remove the header to intentionally break the link").
+diffusers prefers copy-paste over abstraction and keeps copies identical with a checker.
+
+## Annotation grammar (the pack pins it; the implementation is authoritative)
+Always rooted at `diffusers.`; optional rename suffix `with X->Y` (comma-chained). Exact rules live in
+`utils/check_copies.py` (and `.ai/pipelines.md` gotcha #5) — read them rather than memorizing.
+```python
+# Copied from diffusers.schedulers.scheduling_ddpm.DDPMScheduler._threshold_sample
+# Copied from diffusers.schedulers.scheduling_ddpm.DDPMSchedulerOutput with DDPM->DDIM
+```
+
+## Check vs fix — the one nuance worth pinning
+- **`python utils/check_copies.py`** (no flag = **check mode**) → **fails** (non-zero) on drift. This is the
+  gate; CI's `check_repository_consistency` job runs exactly this. **`make quality` does NOT catch drift.**
+- **`make fix-copies`** → runs `check_copies.py --fix_and_overwrite`: auto-fixes and exits 0. Remediation,
+  not a checker. Also regenerates `src/diffusers/utils/dummy_pt_objects.py`.
+
+Editing a `# Copied from` **source** drifts every copy → run `make fix-copies`, commit the regenerated files.
+To **detect** drift in review, run `python utils/check_copies.py` — never rely on `make quality`.

@@ -1,0 +1,26 @@
+---
+description: diffusers forward()/__call__() docstring parity — a CI merge gate that does not auto-fix
+globs: src/diffusers/models/**, src/diffusers/pipelines/**
+alwaysApply: false
+---
+
+# diffusers docstring parity (models & pipelines)
+
+A `ModelMixin.forward()` / `DiffusionPipeline.__call__()` must keep its signature and its Google-style
+`Args:` docstring in sync, or the CI merge gate fails. Authoritative source:
+`utils/check_forward_call_docstrings.py` (its module docstring is the spec) — defer to it. For docstring /
+typing *style* itself, the convention root is `AGENTS.md` (= `.ai/AGENTS.md`) / `diffusers-style`; this rule
+pins only the CI parity *gate*.
+
+- Every signature arg has an `Args:` entry; no stale entries for removed args; a `Returns:` section is
+  required when the method has a non-`None` return annotation.
+- **`--fix` only REMOVES stale entries — it never adds missing ones.** You hand-write the `Args:` entry
+  for a new param; `make fix-copies` will not do it for you. That's why it bites a first model/pipeline PR.
+- **Hard gate:** the `check_repository_consistency` job runs `python utils/check_forward_call_docstrings.py`
+  (`.github/workflows/pr_tests.yml`); local target `make check-forward-call-docstrings`. Not caught by
+  `make quality`.
+
+Invariant (clean = "All forward/__call__ arguments are documented", exit 0):
+```bash
+python utils/check_forward_call_docstrings.py
+```

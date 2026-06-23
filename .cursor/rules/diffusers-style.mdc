@@ -1,0 +1,21 @@
+---
+description: diffusers style, license headers, typing, docstrings, and the make targets
+globs: **/*.py
+alwaysApply: false
+---
+
+# diffusers style
+
+Authoritative source: `AGENTS.md` (= `.ai/AGENTS.md`) → "Coding style" / "Code formatting" ("write code as
+simple and explicit as possible"; "`make style` and `make fix-copies` should be run before opening a PR").
+Defer to it. The enforcement specifics the pack pins — run before committing:
+```bash
+make style        # ruff check --fix + ruff format + doc-builder   (mutating)
+make quality      # ruff check + ruff format --check + doc-builder + check_doc_toc.py  (check-only)
+make fix-copies   # re-sync `# Copied from` + regenerate dummy objects (see diffusers-copied-from)
+```
+- Linter is **ruff** (not black); line length **119** (`pyproject.toml [tool.ruff]`).
+- Apache-2.0 header on every new `.py` (top-level `__init__.py` excepted); **new code prefers** modern
+  type hints (`int | None`, `tuple[int, int]`); the codebase still contains `Optional[...]`/`Tuple[...]`
+  and this is **not lint-enforced**. Google-style docstrings.
+- Never silently break public API — go through `from ...utils import deprecate`.

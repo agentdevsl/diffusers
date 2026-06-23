@@ -1,0 +1,42 @@
+---
+description: How to write a diffusers scheduler (base classes, config, output, required methods)
+globs: src/diffusers/schedulers/scheduling_*.py
+alwaysApply: false
+---
+
+# diffusers schedulers
+
+No `.ai/` doc covers schedulers — this rule is genuine pack value. **Scaffold from a real reference** — copy
+the nearest existing `scheduling_*.py` (signatures vary per scheduler), rather than writing from memory. For
+style, typing, and the `# Copied from` mechanism defer to `AGENTS.md` (= `.ai/AGENTS.md`) / `diffusers-style`.
+
+- Subclass **`(SchedulerMixin, ConfigMixin)`**; decorate `__init__` with **`@register_to_config`**. (Flax
+  variants use `FlaxSchedulerMixin` — keep a first contribution **torch-only**; scipy/flax need extra
+  optional-dep gating + dummy files.)
+- `step` returns a **`BaseOutput` subclass**. Two patterns exist — follow your reference:
+  - the **shared `SchedulerOutput`** (`from .scheduling_utils import SchedulerOutput`), used by the
+    DPM-family / PNDM / SDE-VE schedulers — it carries only `prev_sample`; **or**
+  - the scheduler's **own `*SchedulerOutput`** (DDIM/Euler-style), which also carries
+    `pred_original_sample`. If you define your own:
+    ```python
+    @dataclass
+    class XxxSchedulerOutput(BaseOutput):
+        prev_sample: torch.Tensor
+        pred_original_sample: torch.Tensor | None = None
+    ```
+- Implement the methods your reference has, copying exact shapes (signatures vary per scheduler):
+  - **Required** (near-universal): `step(model_output, timestep, sample, ...) -> SchedulerOutput | XxxSchedulerOutput | tuple`
+    (the output type is whichever of the two patterns above your reference uses — don't assume a new `Xxx` type)
+    and `set_timesteps(num_inference_steps, device=None, ...) -> None`.
+  - **Common** (~33-34 of the 44 torch schedulers — `scale_model_input` 34, `add_noise` 33 — incl. DDIM/DDPM, but not universal):
+    `scale_model_input(sample, timestep) -> torch.Tensor` and
+    `add_noise(original_samples, noise, timesteps) -> torch.Tensor`. Include them if your reference has them.
+- Reuse shared helpers via `# Copied from` (see `diffusers-copied-from`), e.g.
+  `# Copied from diffusers.schedulers.scheduling_ddpm.betas_for_alpha_bar`.
+- Register imports per `diffusers-structure`; add a `SchedulerCommonTest` test per `diffusers-tests`.
+
+Invariant — every torch scheduler's `step` returns a `SchedulerOutput` subclass (empty output = all conform):
+
+```bash
+grep -L "SchedulerOutput" src/diffusers/schedulers/scheduling_*.py | grep -v _flax
+```

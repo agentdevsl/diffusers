@@ -1,0 +1,28 @@
+---
+description: Deprecating or removing public diffusers API — use deprecate() and treat the removal version as a hard tombstone
+alwaysApply: false
+---
+
+# diffusers deprecation contract
+
+When changing, renaming, or removing public API (a kwarg, attribute, or method), never break it
+silently — route through the `deprecate()` helper. Authoritative source:
+`src/diffusers/utils/deprecation_utils.py` — `deprecate(*args, take_from=None, ...)` (the signature) and
+its removal-version guard. The convention root `AGENTS.md` (= `.ai/AGENTS.md`, "Coding style") states the
+*philosophy* — no deprecation shims for code that never shipped — but not this helper; defer to the helper
+source for the mechanism.
+
+- Call shape: `deprecate(("name", "X.Y.Z", message), take_from=kwargs)` — pop a deprecated kwarg via
+  `take_from`; `standard_warn=False` suppresses the standard prefix.
+- **The removal version is a hard tombstone, not a hint.** Once the library's base `__version__` reaches
+  `X.Y.Z`, `deprecate()` **raises `ValueError`** (not a warning), telling the maintainer to delete the
+  tuple. So the version you pick MUST be a *future* release — a stale/already-shipped version turns the
+  deprecation into a hard crash, and bumping `__version__` past an old tuple breaks that path.
+- Never emit a raw `FutureWarning` for an API deprecation — use `deprecate()` so the tombstone is enforced.
+
+```python
+# Bare deprecation warning (real: configuration_utils.py) — warns now, hard-raises once __version__ >= "1.0.0":
+deprecate("get_config_dict", "1.0.0", deprecation_message, standard_warn=False)
+# Renamed/removed kwarg — pop it from kwargs via take_from and keep using its value:
+value = deprecate(("old_kwarg", "1.0.0", message), take_from=kwargs)
+```

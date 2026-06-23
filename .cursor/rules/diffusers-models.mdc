@@ -1,0 +1,20 @@
+---
+description: How to write a diffusers model (ModelMixin, ConfigMixin, register_to_config)
+globs: src/diffusers/models/**
+alwaysApply: false
+---
+
+# diffusers models
+
+Authoritative source: `.ai/models.md` (model conventions, attention pattern, class attributes, dependencies,
+gotchas) — defer to it for subsystem specifics. For style/formatting see `AGENTS.md` (= `.ai/AGENTS.md`).
+The upstream scaffold path is the `model-integration` skill (`.ai/skills/model-integration/`). Model files
+are nested (`models/unets/`, `models/transformers/`, `models/autoencoders/`, …) — the `**` glob is
+intentional. Scaffold by comparison rather than from memory — copy the closest reference and follow
+`.ai/models.md` for the per-class attributes, attention pattern, and gotchas:
+```python
+# reference shape only — see .ai/models.md for the conventions, gotchas, and class attributes
+class XxxTransformer2DModel(ModelMixin, ConfigMixin):   # cf. transformer_flux.py / transformer_wan.py
+    @register_to_config
+    def __init__(self, ...): ...
+```

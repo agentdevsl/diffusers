@@ -1,0 +1,35 @@
+---
+description: Adding a diffusers component that needs a non-torch backend (scipy/flax/torchsde/transformers) — backend gating and dummy objects
+alwaysApply: false
+---
+
+# diffusers optional-dependency gating
+
+Most contributions are torch-only — for the torch import path see `diffusers-structure` (and the convention
+root `AGENTS.md` = `.ai/AGENTS.md`). When a new component needs a **non-torch backend** (scipy, flax,
+torchsde, transformers, …), it must be gated so importing it without the backend raises a clear error, and CI
+regenerates a **per-backend** dummy file. `.ai/` does not document backend gating; authoritative source:
+`utils/check_dummies.py` (it parses the `is_<backend>_available()` else-blocks in
+`src/diffusers/__init__.py` and regenerates the dummies); fix with `make fix-copies`.
+
+- Put the object in a backend-gated else-block in `src/diffusers/__init__.py`
+  (e.g. `if not (is_torch_available() and is_scipy_available()):`), mirroring an existing gated component.
+- The regenerated dummy is **per-backend** — e.g. `src/diffusers/utils/dummy_torch_and_scipy_objects.py`, **not**
+  `dummy_pt_objects.py`. Expect that file in your diff; never hand-edit it (`make fix-copies` owns it).
+- **Hard gate:** `check_repository_consistency` runs `python utils/check_dummies.py`
+  (`.github/workflows/pr_tests.yml`); it is NOT in `make quality`, so a local `make quality` passes and CI
+  then fails on a dummy file you never touched. Run `make fix-copies` before pushing.
+
+```python
+# src/diffusers/__init__.py — gate the component on its backend; CI fills the dummy from this else-block:
+try:
+    if not (is_torch_available() and is_scipy_available()):
+        raise OptionalDependencyNotAvailable()
+except OptionalDependencyNotAvailable:
+    from .utils import dummy_torch_and_scipy_objects  # noqa F403
+    _import_structure["utils.dummy_torch_and_scipy_objects"] = [
+        name for name in dir(dummy_torch_and_scipy_objects) if not name.startswith("_")
+    ]
+else:
+    _import_structure["schedulers"].extend(["LMSDiscreteScheduler"])
+```

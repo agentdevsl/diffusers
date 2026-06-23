@@ -1,0 +1,44 @@
+---
+description: diffusers test conventions — correct base test class per subsystem, slow tests, no-merge gate
+globs: tests/**
+alwaysApply: false
+---
+
+# diffusers tests (no tests = no merge)
+
+No `.ai/` doc covers the per-subsystem test base classes for schedulers — this rule is genuine pack value
+(for model/pipeline test scaffolding `.ai/skills/model-integration/SKILL.md` → "Testing" is authoritative;
+defer to it). For style defer to `AGENTS.md` (= `.ai/AGENTS.md`). **Use the right base class for the
+subsystem** — this is the most common scaffolding error.
+
+## Schedulers → `SchedulerCommonTest` (NOT `PipelineTesterMixin`)
+`tests/schedulers/test_scheduler_<name>.py`, subclassing `SchedulerCommonTest` (defined in
+`tests/schedulers/test_schedulers.py`):
+```python
+from .test_schedulers import SchedulerCommonTest
+
+class XxxSchedulerTest(SchedulerCommonTest):
+    scheduler_classes = (XxxScheduler,)
+    forward_default_kwargs = ()
+
+    def get_scheduler_config(self, **kwargs):
+        config = {"num_train_timesteps": 1000, ...}  # copy shape from a reference scheduler test
+        config.update(**kwargs)
+        return config
+
+    # add scheduler-specific tests: test_timesteps, test_betas, test_prediction_type, ...
+```
+The base provides `dummy_sample`, `dummy_model()`, `check_over_configs()`, `check_over_forward()`,
+`full_loop()`. **Scheduler common tests are fast by default — do not mark them `@slow`.**
+
+## Pipelines / Models
+- **Pipelines → `PipelineTesterMixin`** (+ `unittest.TestCase`), implementing `get_dummy_components()` and
+  `get_dummy_inputs(device, seed=0)` with tiny configs.
+- **Models → the subsystem `ModelTesterMixin`-style base** (e.g. `ModelTesterMixin` for the transformers/unets
+  /autoencoders subdir); don't hand-write — generate with `python utils/generate_model_tests.py ...`.
+See `.ai/skills/model-integration/SKILL.md` → "Testing" for the canonical scaffold (e.g.
+`tests/pipelines/wan/test_wan.py`, `tests/models/transformers/test_models_transformer_flux.py`).
+
+## Slow / integration
+Mark heavy tests `@slow`; they run under `RUN_SLOW=1`. Keep the fast-test surface green for touched files.
+Other test dirs exist (`lora/`, `single_file/`, `quantization/`, …) — mirror the closest neighbor.

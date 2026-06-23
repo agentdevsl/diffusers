@@ -1,0 +1,30 @@
+---
+description: How to add a modular diffusers pipeline — the preferred path for new pipelines
+globs: src/diffusers/modular_pipelines/**/*.py
+alwaysApply: false
+---
+
+# diffusers modular pipelines (preferred for new pipelines)
+
+Authoritative source: `.ai/modular.md` — the modular guide that the convention root `.ai/AGENTS.md`
+indexes under "Reference guides" (file split, block-type decision tree, build order, the
+guider abstraction, flat assembly, gotchas, conversion checklist) — **defer to it, don't restate**.
+`.ai/pipelines.md` opens by saying modular is the **preferred** way to add a new pipeline. No `.ai/`
+detail is duplicated here; this rule only points and pins the directory shape.
+
+- **Scaffold by comparison** — copy the nearest existing modular pipeline (`.ai/modular.md` names
+  `qwenimage` / `flux2` / `wan` / `helios`); don't write block structure from memory.
+- A model dir splits into block files (`encoders.py`, `before_denoise.py`, `denoise.py`, `decoders.py`,
+  `inputs.py`, `modular_pipeline.py`, …) **plus a top-level assembly file** `modular_blocks_<model>.py`
+  that wires the blocks in order. Follow the nearest neighbor's shape.
+- **Gotcha #1 (the top footgun):** a modular block must NOT import from the standard
+  `diffusers.pipelines` package — keep blocks self-contained. For a shared util, the source sanctions
+  exactly two escapes: redefine it as a standalone function, or pull it via a
+  `# Copied from diffusers.pipelines.<model>...` header (see `.ai/modular.md` gotcha #1).
+- Tests → `ModularPipelineTesterMixin` in `tests/modular_pipelines/<model>/` (set `pipeline_class` +
+  `pipeline_blocks_class`) — **not** the standard `PipelineTesterMixin` (`diffusers-tests`).
+
+Invariant — every modular pipeline dir ships its assembly file (empty output = all conform):
+```bash
+for d in src/diffusers/modular_pipelines/*/; do ls "$d"modular_blocks_*.py >/dev/null 2>&1 || echo "MISSING: $d"; done
+```

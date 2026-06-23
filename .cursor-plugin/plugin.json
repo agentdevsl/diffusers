@@ -1,0 +1,25 @@
+{
+  "name": "diffusers-cursor-plugin",
+  "displayName": "Diffusers Cursor Plugin",
+  "description": "Cursor pack for diffusers contributors: SDLC rules, skills, agents, commands, and hooks that enforce the library's own conventions.",
+  "version": "0.6.6",
+  "author": {
+    "name": "agentdevsl"
+  },
+  "repository": "https://github.com/agentdevsl/cursor_tech_excercise",
+  "license": "Apache-2.0",
+  "keywords": [
+    "diffusers",
+    "cursor",
+    "rules",
+    "skills",
+    "agents"
+  ],
+  "logo": "assets/logo.svg",
+  "rules": ".cursor/rules",
+  "skills": ".cursor/skills",
+  "agents": ".cursor/agents",
+  "commands": ".cursor/commands",
+  "hooks": ".cursor/hooks.json",
+  "mcpServers": ".cursor/mcp.json"
+}
