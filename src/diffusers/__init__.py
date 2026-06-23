@@ -183,6 +183,7 @@ else:
             "PyramidAttentionBroadcastConfig",
             "SmoothedEnergyGuidanceConfig",
             "TaylorSeerCacheConfig",
+            "TeaCacheConfig",
             "TextKVCacheConfig",
             "apply_faster_cache",
             "apply_first_block_cache",
@@ -190,6 +191,7 @@ else:
             "apply_mag_cache",
             "apply_pyramid_attention_broadcast",
             "apply_taylorseer_cache",
+            "apply_teacache",
             "apply_text_kv_cache",
         ]
     )
@@ -1045,6 +1047,7 @@ if TYPE_CHECKING or DIFFUSERS_SLOW_IMPORT:
             PyramidAttentionBroadcastConfig,
             SmoothedEnergyGuidanceConfig,
             TaylorSeerCacheConfig,
+            TeaCacheConfig,
             TextKVCacheConfig,
             apply_faster_cache,
             apply_first_block_cache,
@@ -1052,6 +1055,7 @@ if TYPE_CHECKING or DIFFUSERS_SLOW_IMPORT:
             apply_mag_cache,
             apply_pyramid_attention_broadcast,
             apply_taylorseer_cache,
+            apply_teacache,
             apply_text_kv_cache,
         )
         from .image_processor import (

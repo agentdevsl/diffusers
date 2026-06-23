@@ -11,6 +11,8 @@ from .cache import (
     PyramidAttentionBroadcastTesterMixin,
     TaylorSeerCacheConfigMixin,
     TaylorSeerCacheTesterMixin,
+    TeaCacheConfigMixin,
+    TeaCacheTesterMixin,
 )
 from .common import BaseModelTesterConfig, ModelTesterMixin
 from .compile import TorchCompileTesterMixin
@@ -63,6 +65,8 @@ __all__ = [
     "FirstBlockCacheTesterMixin",
     "MagCacheConfigMixin",
     "MagCacheTesterMixin",
+    "TeaCacheConfigMixin",
+    "TeaCacheTesterMixin",
     "GGUFCompileTesterMixin",
     "GGUFConfigMixin",
     "GGUFTesterMixin",

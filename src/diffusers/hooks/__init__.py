@@ -27,4 +27,5 @@ if is_torch_available():
     from .pyramid_attention_broadcast import PyramidAttentionBroadcastConfig, apply_pyramid_attention_broadcast
     from .smoothed_energy_guidance_utils import SmoothedEnergyGuidanceConfig
     from .taylorseer_cache import TaylorSeerCacheConfig, apply_taylorseer_cache
+    from .teacache import FLUX_TEACACHE_COEFFICIENTS, TeaCacheConfig, apply_teacache
     from .text_kv_cache import TextKVCacheConfig, apply_text_kv_cache
