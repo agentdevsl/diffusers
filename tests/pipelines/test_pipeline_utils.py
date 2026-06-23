@@ -1,6 +1,8 @@
 import contextlib
 import io
+import os
 import re
+import tempfile
 import unittest
 
 import torch
@@ -18,9 +20,25 @@ from diffusers import (
     StableDiffusionPipeline,
     UNet2DConditionModel,
 )
-from diffusers.pipelines.pipeline_loading_utils import is_safetensors_compatible, variant_compatible_siblings
+from diffusers.pipelines.pipeline_loading_utils import (
+    _identify_model_variants,
+    is_safetensors_compatible,
+    variant_compatible_siblings,
+)
 
 from ..testing_utils import require_torch_accelerator, torch_device
+
+
+class IdentifyModelVariantsTests(unittest.TestCase):
+    def test_extensionless_files_do_not_crash_variant_detection(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.makedirs(os.path.join(tmpdir, "unet"))
+            open(os.path.join(tmpdir, "unet", "LICENSE"), "w").write("")
+            open(os.path.join(tmpdir, "unet", "diffusion_pytorch_model.fp16.safetensors"), "w").write("")
+
+            model_variants = _identify_model_variants(tmpdir, "fp16", {"unet": ["UNet2DConditionModel", "unet"]})
+
+            self.assertEqual(model_variants, {"unet": "fp16"})
 
 
 class IsSafetensorsCompatibleTests(unittest.TestCase):
