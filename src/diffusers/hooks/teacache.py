@@ -132,11 +132,13 @@ class TeaCacheHeadHook(ModelHook):
         config: TeaCacheConfig,
         extract_modulated_input: Callable,
         coefficients: List[float],
+        advance_step_on_skip: bool = False,
     ):
         self.state_manager = state_manager
         self.config = config
         self.extract_modulated_input = extract_modulated_input
         self.coefficients = coefficients
+        self.advance_step_on_skip = advance_step_on_skip
         self._metadata = None
 
     def initialize_hook(self, module):
@@ -179,6 +181,9 @@ class TeaCacheHeadHook(ModelHook):
 
         if not should_compute:
             logger.debug(f"TeaCache: Skipping step {state.step_index}")
+
+            if self.advance_step_on_skip:
+                self._advance_step(state)
 
             output = hidden_states
             res = state.previous_residual
@@ -229,6 +234,14 @@ class TeaCacheHeadHook(ModelHook):
     def reset_state(self, module):
         self.state_manager.reset()
         return module
+
+    def _advance_step(self, state: TeaCacheState):
+        state.step_index += 1
+        if state.step_index >= self.config.num_inference_steps:
+            state.step_index = 0
+            state.accumulated_distance = 0.0
+            state.previous_residual = None
+            state.previous_modulated_input = None
 
 
 class TeaCacheBlockHook(ModelHook):
@@ -350,7 +363,9 @@ def apply_teacache(module: torch.nn.Module, config: TeaCacheConfig) -> None:
         name, block = remaining_blocks[0]
         logger.info(f"TeaCache: Applying Head+Tail Hooks to single block '{name}'")
         _apply_teacache_block_hook(block, state_manager, config, is_tail=True)
-        _apply_teacache_head_hook(block, state_manager, config, extract_modulated_input, coefficients)
+        _apply_teacache_head_hook(
+            block, state_manager, config, extract_modulated_input, coefficients, advance_step_on_skip=True
+        )
         return
 
     head_block_name, head_block = remaining_blocks.pop(0)
@@ -372,13 +387,16 @@ def _apply_teacache_head_hook(
     config: TeaCacheConfig,
     extract_modulated_input: Callable,
     coefficients: List[float],
+    advance_step_on_skip: bool = False,
 ) -> None:
     registry = HookRegistry.check_if_exists_or_initialize(block)
 
     if registry.get_hook(_TEACACHE_LEADER_BLOCK_HOOK) is not None:
         registry.remove_hook(_TEACACHE_LEADER_BLOCK_HOOK)
 
-    hook = TeaCacheHeadHook(state_manager, config, extract_modulated_input, coefficients)
+    hook = TeaCacheHeadHook(
+        state_manager, config, extract_modulated_input, coefficients, advance_step_on_skip=advance_step_on_skip
+    )
     registry.register_hook(hook, _TEACACHE_LEADER_BLOCK_HOOK)
 
 

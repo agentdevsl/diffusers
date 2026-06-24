@@ -643,10 +643,11 @@ class TeaCacheConfigMixin:
     """
 
     # Default TeaCache config - can be overridden by subclasses.
-    # Uses num_inference_steps=4 so interior steps can be skipped during _test_cache_inference.
+    # Uses num_inference_steps=4 and an infinite rel_l1_thresh so the second
+    # inference step is always skipped, which is required by _test_cache_inference.
     TEA_CACHE_CONFIG = {
         "num_inference_steps": 4,
-        "rel_l1_thresh": 100.0,
+        "rel_l1_thresh": float("inf"),
     }
 
     def _get_cache_config(self):
