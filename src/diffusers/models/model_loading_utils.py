@@ -18,6 +18,7 @@ import functools
 import importlib
 import inspect
 import os
+import threading
 from array import array
 from collections import OrderedDict, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -50,6 +51,8 @@ from ..utils.distributed_utils import is_torch_dist_rank_zero
 
 
 logger = logging.get_logger(__name__)
+
+_parallel_load_lock = threading.Lock()
 
 _CLASS_REMAPPING_DICT = {
     "Transformer2DModel": {
@@ -360,31 +363,32 @@ def _load_shard_file(
     if hf_quantizer is not None:
         state_dict = hf_quantizer.maybe_update_state_dict(state_dict)
 
-    mismatched_keys = _find_mismatched_keys(
-        state_dict,
-        model_state_dict,
-        loaded_keys,
-        ignore_mismatched_sizes,
-    )
-    error_msgs = []
-    if low_cpu_mem_usage:
-        offload_index, state_dict_index = load_model_dict_into_meta(
-            model,
+    with _parallel_load_lock:
+        mismatched_keys = _find_mismatched_keys(
             state_dict,
-            device_map=device_map,
-            dtype=dtype,
-            hf_quantizer=hf_quantizer,
-            keep_in_fp32_modules=keep_in_fp32_modules,
-            unexpected_keys=unexpected_keys,
-            offload_folder=offload_folder,
-            offload_index=offload_index,
-            state_dict_index=state_dict_index,
-            state_dict_folder=state_dict_folder,
+            model_state_dict,
+            loaded_keys,
+            ignore_mismatched_sizes,
         )
-    else:
-        assign_to_params_buffers = check_support_param_buffer_assignment(model, state_dict)
+        error_msgs = []
+        if low_cpu_mem_usage:
+            offload_index, state_dict_index = load_model_dict_into_meta(
+                model,
+                state_dict,
+                device_map=device_map,
+                dtype=dtype,
+                hf_quantizer=hf_quantizer,
+                keep_in_fp32_modules=keep_in_fp32_modules,
+                unexpected_keys=unexpected_keys,
+                offload_folder=offload_folder,
+                offload_index=offload_index,
+                state_dict_index=state_dict_index,
+                state_dict_folder=state_dict_folder,
+            )
+        else:
+            assign_to_params_buffers = check_support_param_buffer_assignment(model, state_dict)
 
-        error_msgs += _load_state_dict_into_model(model, state_dict, assign_to_params_buffers)
+            error_msgs += _load_state_dict_into_model(model, state_dict, assign_to_params_buffers)
     return offload_index, state_dict_index, mismatched_keys, error_msgs
 
 

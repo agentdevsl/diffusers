@@ -990,7 +990,9 @@ def _identify_model_variants(folder: str, variant: str, config: dict) -> dict:
         for sub_folder in os.listdir(folder):
             folder_path = os.path.join(folder, sub_folder)
             is_folder = os.path.isdir(folder_path) and sub_folder in config
-            variant_exists = is_folder and any(p.split(".")[1].startswith(variant) for p in os.listdir(folder_path))
+            variant_exists = is_folder and any(
+                "." in p and p.split(".", 1)[1].startswith(variant) for p in os.listdir(folder_path)
+            )
             if variant_exists:
                 model_variants[sub_folder] = variant
     return model_variants
