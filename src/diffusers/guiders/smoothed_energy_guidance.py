@@ -126,7 +126,9 @@ class SmoothedEnergyGuidance(BaseGuidance):
                 raise ValueError(
                     f"Expected `seg_guidance_layers` to be an int or a list of ints, but got {type(seg_guidance_layers)}."
                 )
-            seg_guidance_config = [SmoothedEnergyGuidanceConfig(layer, fqn="auto") for layer in seg_guidance_layers]
+            seg_guidance_config = [
+                SmoothedEnergyGuidanceConfig(indices=[layer], fqn="auto") for layer in seg_guidance_layers
+            ]
 
         if isinstance(seg_guidance_config, dict):
             seg_guidance_config = SmoothedEnergyGuidanceConfig.from_dict(seg_guidance_config)
@@ -145,6 +147,7 @@ class SmoothedEnergyGuidance(BaseGuidance):
         self._seg_layer_hook_names = [f"SmoothedEnergyGuidance_{i}" for i in range(len(self.seg_guidance_config))]
 
     def prepare_models(self, denoiser: torch.nn.Module) -> None:
+        self._count_prepared += 1
         if self._is_seg_enabled() and self.is_conditional and self._count_prepared > 1:
             for name, config in zip(self._seg_layer_hook_names, self.seg_guidance_config):
                 _apply_smoothed_energy_guidance_hook(denoiser, config, self.seg_blur_sigma, name=name)
