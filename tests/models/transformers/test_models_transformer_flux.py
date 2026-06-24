@@ -49,6 +49,7 @@ from ..testing_utils import (
     QuantoTesterMixin,
     SingleFileTesterMixin,
     TaylorSeerCacheTesterMixin,
+    TeaCacheTesterMixin,
     TorchAoCompileTesterMixin,
     TorchAoTesterMixin,
     TorchCompileTesterMixin,
@@ -525,6 +526,10 @@ class TestFluxTransformerFasterCache(FluxTransformerTesterConfig, FasterCacheTes
 
 class TestFluxTransformerMagCache(FluxTransformerTesterConfig, MagCacheTesterMixin):
     """MagCache tests for Flux Transformer."""
+
+
+class TestFluxTransformerTeaCache(FluxTransformerTesterConfig, TeaCacheTesterMixin):
+    """TeaCache tests for Flux Transformer."""
 
 
 class TestFluxTransformerTaylorSeerCache(FluxTransformerTesterConfig, TaylorSeerCacheTesterMixin):

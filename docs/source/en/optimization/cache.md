@@ -163,3 +163,33 @@ image = pipe("A cat playing chess", num_inference_steps=4).images[0]
 
 > [!TIP]
 > For pipelines that run Classifier-Free Guidance in a **batched** manner (like SDXL or Flux), the `hidden_states` processed by the model contain both conditional and unconditional branches concatenated together. The calibration process automatically accounts for this, producing a single array of ratios that represents the joint behavior. You can use this resulting array directly without modification.
+
+## TeaCache
+
+[TeaCache](https://huggingface.co/papers/2411.19108) accelerates FLUX inference by skipping the full transformer block stack when consecutive timestep-modulated inputs are sufficiently similar. At each denoising step, TeaCache extracts the modulated input at the first transformer block, computes a relative L1 distance from the previous step, rescales it with model-specific polynomial coefficients, and accumulates the result. When the accumulated distance stays below `rel_l1_thresh`, the hook replays the cached full-stack residual instead of running the blocks. The first and last denoising steps always compute.
+
+```python
+import torch
+from diffusers import FluxPipeline, TeaCacheConfig
+
+pipe = FluxPipeline.from_pretrained(
+    "black-forest-labs/FLUX.1-dev",
+    torch_dtype=torch.bfloat16,
+).to("cuda")
+
+config = TeaCacheConfig(rel_l1_thresh=0.4, num_inference_steps=28)
+pipe.transformer.enable_cache(config)
+
+image = pipe("A cat playing chess", num_inference_steps=28).images[0]
+```
+
+> [!NOTE]
+> TeaCache v1 supports [`FluxTransformer2DModel`] only. FLUX polynomial coefficients are vendored as `FLUX_TEACACHE_COEFFICIENTS` in `diffusers.hooks.teacache`.
+
+### Cache comparison
+
+| Technique | Skip signal | Residual replay | FLUX support |
+| --- | --- | --- | --- |
+| FirstBlockCache | First-block output delta vs previous step | Reuses tail output from first block | Model-agnostic |
+| MagCache | Pre-computed `mag_ratios` error budget on residual magnitude | Full-stack `input + previous_residual` | FLUX (with calibration) |
+| TeaCache | Polynomial-rescaled relative L1 on modulated input | Full-stack `input + previous_residual` | FLUX only (v1) |

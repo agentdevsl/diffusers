@@ -24,12 +24,14 @@ from diffusers.hooks import (
     MagCacheConfig,
     PyramidAttentionBroadcastConfig,
     TaylorSeerCacheConfig,
+    TeaCacheConfig,
 )
 from diffusers.hooks.faster_cache import _FASTER_CACHE_BLOCK_HOOK, _FASTER_CACHE_DENOISER_HOOK
 from diffusers.hooks.first_block_cache import _FBC_BLOCK_HOOK, _FBC_LEADER_BLOCK_HOOK
 from diffusers.hooks.mag_cache import _MAG_CACHE_BLOCK_HOOK, _MAG_CACHE_LEADER_BLOCK_HOOK
 from diffusers.hooks.pyramid_attention_broadcast import _PYRAMID_ATTENTION_BROADCAST_HOOK
 from diffusers.hooks.taylorseer_cache import _TAYLORSEER_CACHE_HOOK
+from diffusers.hooks.teacache import _TEACACHE_BLOCK_HOOK, _TEACACHE_LEADER_BLOCK_HOOK
 from diffusers.models.cache_utils import CacheMixin
 
 from ...testing_utils import assert_tensors_close, backend_empty_cache, is_cache, torch_device
@@ -628,6 +630,70 @@ class MagCacheTesterMixin(MagCacheConfigMixin, CacheTesterMixin):
 
     @require_cache_mixin
     def test_mag_cache_reset_stateful_cache(self):
+        self._test_reset_stateful_cache()
+
+
+@is_cache
+class TeaCacheConfigMixin:
+    """
+    Base mixin providing TeaCache config.
+
+    Expected class attributes:
+        - model_class: The model class to test (must use CacheMixin)
+    """
+
+    # Default TeaCache config - can be overridden by subclasses.
+    # Uses num_inference_steps=4 so interior steps can be skipped during _test_cache_inference.
+    TEA_CACHE_CONFIG = {
+        "num_inference_steps": 4,
+        "rel_l1_thresh": 100.0,
+    }
+
+    def _get_cache_config(self):
+        return TeaCacheConfig(**self.TEA_CACHE_CONFIG)
+
+    def _get_hook_names(self):
+        return [_TEACACHE_LEADER_BLOCK_HOOK, _TEACACHE_BLOCK_HOOK]
+
+
+@is_cache
+class TeaCacheTesterMixin(TeaCacheConfigMixin, CacheTesterMixin):
+    """
+    Mixin class for testing TeaCache on models.
+
+    Expected class attributes:
+        - model_class: The model class to test (must use CacheMixin)
+
+    Expected methods to be implemented by subclasses:
+        - get_init_dict(): Returns dict of arguments to initialize the model
+        - get_dummy_inputs(): Returns dict of inputs to pass to the model forward pass
+
+    Pytest mark: cache
+        Use `pytest -m "not cache"` to skip these tests
+    """
+
+    @require_cache_mixin
+    def test_teacache_enable_disable_state(self):
+        self._test_cache_enable_disable_state()
+
+    @require_cache_mixin
+    def test_teacache_double_enable_raises_error(self):
+        self._test_cache_double_enable_raises_error()
+
+    @require_cache_mixin
+    def test_teacache_hooks_registered(self):
+        self._test_cache_hooks_registered()
+
+    @require_cache_mixin
+    def test_teacache_inference(self):
+        self._test_cache_inference()
+
+    @require_cache_mixin
+    def test_teacache_context_manager(self):
+        self._test_cache_context_manager()
+
+    @require_cache_mixin
+    def test_teacache_reset_stateful_cache(self):
         self._test_reset_stateful_cache()
 
 

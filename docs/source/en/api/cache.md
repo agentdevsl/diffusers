@@ -46,3 +46,11 @@ Cache methods speedup diffusion transformers by storing and reusing intermediate
 [[autodoc]] MagCacheConfig
 
 [[autodoc]] apply_mag_cache
+
+## TeaCacheConfig
+
+[[autodoc]] TeaCacheConfig
+
+[[autodoc]] apply_teacache
+
+[[autodoc]] FLUX_TEACACHE_COEFFICIENTS
