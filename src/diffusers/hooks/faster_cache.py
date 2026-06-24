@@ -428,7 +428,9 @@ class FasterCacheBlockHook(ModelHook):
             should_compute_attention = self.state.iteration > 0 and self.state.iteration % self.block_skip_range == 0
             should_skip_attention = not should_compute_attention
         if should_skip_attention:
-            should_skip_attention = self.is_guidance_distilled or self.state.batch_size != batch_size
+            should_skip_attention = self.state.cache is not None and (
+                self.is_guidance_distilled or self.state.batch_size != batch_size
+            )
 
         if should_skip_attention:
             logger.debug("FasterCache - Skipping attention and using approximation")
