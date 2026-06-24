@@ -197,6 +197,9 @@ class FirstBlockCacheConfig(metaclass=DummyObject):
         requires_backends(cls, ["torch"])
 
 
+FLUX_TEACACHE_COEFFICIENTS = None
+
+
 class HookRegistry(metaclass=DummyObject):
     _backends = ["torch"]
 

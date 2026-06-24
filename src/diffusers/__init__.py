@@ -177,6 +177,7 @@ else:
         [
             "FasterCacheConfig",
             "FirstBlockCacheConfig",
+            "FLUX_TEACACHE_COEFFICIENTS",
             "HookRegistry",
             "LayerSkipConfig",
             "MagCacheConfig",
@@ -1041,6 +1042,7 @@ if TYPE_CHECKING or DIFFUSERS_SLOW_IMPORT:
         from .hooks import (
             FasterCacheConfig,
             FirstBlockCacheConfig,
+            FLUX_TEACACHE_COEFFICIENTS,
             HookRegistry,
             LayerSkipConfig,
             MagCacheConfig,
