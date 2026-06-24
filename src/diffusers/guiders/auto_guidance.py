@@ -104,7 +104,7 @@ class AutoGuidance(BaseGuidance):
                     f"Expected `auto_guidance_layers` to be an int or a list of ints, but got {type(auto_guidance_layers)}."
                 )
             auto_guidance_config = [
-                LayerSkipConfig(layer, fqn="auto", dropout=dropout) for layer in auto_guidance_layers
+                LayerSkipConfig(indices=[layer], fqn="auto", dropout=dropout) for layer in auto_guidance_layers
             ]
 
         if isinstance(auto_guidance_config, dict):

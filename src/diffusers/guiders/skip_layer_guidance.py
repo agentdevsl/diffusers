@@ -136,7 +136,7 @@ class SkipLayerGuidance(BaseGuidance):
                 raise ValueError(
                     f"Expected `skip_layer_guidance_layers` to be an int or a list of ints, but got {type(skip_layer_guidance_layers)}."
                 )
-            skip_layer_config = [LayerSkipConfig(layer, fqn="auto") for layer in skip_layer_guidance_layers]
+            skip_layer_config = [LayerSkipConfig(indices=[layer], fqn="auto") for layer in skip_layer_guidance_layers]
 
         if isinstance(skip_layer_config, dict):
             skip_layer_config = LayerSkipConfig.from_dict(skip_layer_config)
