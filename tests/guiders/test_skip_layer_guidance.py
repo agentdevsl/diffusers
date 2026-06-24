@@ -30,5 +30,5 @@ class SkipLayerGuidanceConfigTest(unittest.TestCase):
 
 class AutoGuidanceConfigTest(unittest.TestCase):
     def test_shorthand_layers_wrap_each_index_in_a_list(self):
-        guider = AutoGuidance(auto_guidance_layers=[3, 4])
+        guider = AutoGuidance(auto_guidance_layers=[3, 4], dropout=1.0)
         self.assertEqual([config.indices for config in guider.auto_guidance_config], [[3], [4]])
