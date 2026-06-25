@@ -73,6 +73,20 @@ class DDIMSchedulerTest(SchedulerCommonTest):
         for timestep_spacing in ["trailing", "leading"]:
             self.check_over_configs(timestep_spacing=timestep_spacing)
 
+    def test_set_timesteps_num_inference_steps_exceeds_train_timesteps_raises(self):
+        # Guard against inverted comparison (num_inference_steps < num_train_timesteps) which would
+        # reject all valid inference schedules and accept invalid ones.
+        scheduler_class = self.scheduler_classes[0]
+        scheduler = scheduler_class(**self.get_scheduler_config())
+        with self.assertRaises(ValueError):
+            scheduler.set_timesteps(scheduler.config.num_train_timesteps + 1)
+
+    def test_set_timesteps_num_inference_steps_at_limit_succeeds(self):
+        scheduler_class = self.scheduler_classes[0]
+        scheduler = scheduler_class(**self.get_scheduler_config())
+        scheduler.set_timesteps(scheduler.config.num_train_timesteps)
+        self.assertEqual(scheduler.num_inference_steps, scheduler.config.num_train_timesteps)
+
     def test_rescale_betas_zero_snr(self):
         for rescale_betas_zero_snr in [True, False]:
             self.check_over_configs(rescale_betas_zero_snr=rescale_betas_zero_snr)
