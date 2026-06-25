@@ -116,6 +116,12 @@ class PerturbedAttentionGuidance(BaseGuidance):
                 raise ValueError(
                     "`perturbed_guidance_layers` must be provided if `perturbed_guidance_config` is not specified."
                 )
+            if isinstance(perturbed_guidance_layers, int):
+                perturbed_guidance_layers = [perturbed_guidance_layers]
+            if not isinstance(perturbed_guidance_layers, list):
+                raise ValueError(
+                    f"Expected `perturbed_guidance_layers` to be an int or a list of ints, but got {type(perturbed_guidance_layers)}."
+                )
             perturbed_guidance_config = LayerSkipConfig(
                 indices=perturbed_guidance_layers,
                 fqn="auto",
