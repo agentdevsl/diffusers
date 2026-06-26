@@ -232,6 +232,17 @@ def apply_first_block_cache(module: torch.nn.Module, config: FirstBlockCacheConf
         for index, block in enumerate(submodule):
             remaining_blocks.append((f"{name}.{index}", block))
 
+    if not remaining_blocks:
+        logger.warning("FirstBlockCache: No transformer blocks found to apply hooks.")
+        return
+
+    if len(remaining_blocks) == 1:
+        head_block_name, head_block = remaining_blocks[0]
+        logger.debug(f"Applying FirstBlockCache head+tail hooks to single block '{head_block_name}'")
+        _apply_fbc_head_block_hook(head_block, state_manager, config.threshold)
+        _apply_fbc_block_hook(head_block, state_manager, is_tail=True)
+        return
+
     head_block_name, head_block = remaining_blocks.pop(0)
     tail_block_name, tail_block = remaining_blocks.pop(-1)
 
