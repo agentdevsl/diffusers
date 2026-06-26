@@ -521,6 +521,11 @@ def apply_faster_cache(module: torch.nn.Module, config: FasterCacheConfig) -> No
         "https://github.com/huggingface/diffusers/issues."
     )
 
+    if config.current_timestep_callback is None:
+        raise ValueError(
+            "The `current_timestep_callback` function must be provided in the configuration to apply FasterCache."
+        )
+
     if config.attention_weight_callback is None:
         # If the user has not provided a weight callback, we default to 0.5 for all timesteps.
         # In the paper, they recommend using a gradually increasing weight from 0 to 1 as the inference progresses, but
