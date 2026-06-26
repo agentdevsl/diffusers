@@ -30,7 +30,8 @@ def test_offload_state_dict_loads_cpu_staged_weights(tmp_path):
         up_block_types=("AttnUpBlock2D", "UpBlock2D"),
     )
     sample = torch.randn(1, 3, 8, 8)
-    reference_output = model(sample).sample
+    timestep = torch.tensor([0])
+    reference_output = model(sample, timestep).sample
     reference_weight = model.conv_in.weight.detach().clone()
 
     model.save_pretrained(tmp_path)
@@ -43,5 +44,5 @@ def test_offload_state_dict_loads_cpu_staged_weights(tmp_path):
     )
 
     assert torch.allclose(loaded.conv_in.weight, reference_weight)
-    loaded_output = loaded(sample).sample
+    loaded_output = loaded(sample, timestep).sample
     assert torch.allclose(loaded_output, reference_output)

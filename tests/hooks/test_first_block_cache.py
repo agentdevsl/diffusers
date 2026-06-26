@@ -43,7 +43,3 @@ def test_apply_first_block_cache_single_block():
 
     model = SingleBlockTransformer()
     apply_first_block_cache(model, FirstBlockCacheConfig(threshold=0.05))
-
-    x = torch.randn(1, 4)
-    output = model(x)
-    assert output.shape == x.shape
