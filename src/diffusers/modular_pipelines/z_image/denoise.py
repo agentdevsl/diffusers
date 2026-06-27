@@ -185,12 +185,14 @@ class ZImageLoopDenoiser(ModularPipelineBlocks):
 
             # Predict the noise residual
             # store the noise_pred in guider_state_batch so that we can apply guidance across all batches
-            model_out_list = components.transformer(
-                x=block_state.latent_model_input,
-                t=block_state.timestep,
-                return_dict=False,
-                **cond_kwargs,
-            )[0]
+            context_name = getattr(guider_state_batch, components.guider._identifier_key)
+            with components.transformer.cache_context(context_name):
+                model_out_list = components.transformer(
+                    x=block_state.latent_model_input,
+                    t=block_state.timestep,
+                    return_dict=False,
+                    **cond_kwargs,
+                )[0]
             noise_pred = torch.stack(model_out_list, dim=0).squeeze(2)
             guider_state_batch.noise_pred = -noise_pred
             components.guider.cleanup_models(components.transformer)

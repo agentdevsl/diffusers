@@ -134,12 +134,14 @@ class ErnieImageLoopDenoiser(ModularPipelineBlocks):
         for guider_state_batch in guider_state:
             components.guider.prepare_models(components.transformer)
             cond_kwargs = {name: getattr(guider_state_batch, name) for name in guider_inputs.keys()}
-            noise_pred = components.transformer(
-                hidden_states=block_state.latent_model_input,
-                timestep=block_state.timestep,
-                return_dict=False,
-                **cond_kwargs,
-            )[0]
+            context_name = getattr(guider_state_batch, components.guider._identifier_key)
+            with components.transformer.cache_context(context_name):
+                noise_pred = components.transformer(
+                    hidden_states=block_state.latent_model_input,
+                    timestep=block_state.timestep,
+                    return_dict=False,
+                    **cond_kwargs,
+                )[0]
             guider_state_batch.noise_pred = noise_pred
             components.guider.cleanup_models(components.transformer)
 
