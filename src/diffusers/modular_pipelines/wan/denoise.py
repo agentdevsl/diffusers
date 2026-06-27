@@ -205,13 +205,15 @@ class WanLoopDenoiser(ModularPipelineBlocks):
 
             # Predict the noise residual
             # store the noise_pred in guider_state_batch so that we can apply guidance across all batches
-            guider_state_batch.noise_pred = components.transformer(
-                hidden_states=block_state.latent_model_input.to(block_state.dtype),
-                timestep=t.expand(block_state.latent_model_input.shape[0]).to(block_state.dtype),
-                attention_kwargs=block_state.attention_kwargs,
-                return_dict=False,
-                **cond_kwargs,
-            )[0]
+            context_name = getattr(guider_state_batch, components.guider._identifier_key)
+            with components.transformer.cache_context(context_name):
+                guider_state_batch.noise_pred = components.transformer(
+                    hidden_states=block_state.latent_model_input.to(block_state.dtype),
+                    timestep=t.expand(block_state.latent_model_input.shape[0]).to(block_state.dtype),
+                    attention_kwargs=block_state.attention_kwargs,
+                    return_dict=False,
+                    **cond_kwargs,
+                )[0]
             components.guider.cleanup_models(components.transformer)
 
         # Perform guidance
@@ -340,13 +342,15 @@ class Wan22LoopDenoiser(ModularPipelineBlocks):
 
             # Predict the noise residual
             # store the noise_pred in guider_state_batch so that we can apply guidance across all batches
-            guider_state_batch.noise_pred = block_state.current_model(
-                hidden_states=block_state.latent_model_input.to(block_state.dtype),
-                timestep=t.expand(block_state.latent_model_input.shape[0]).to(block_state.dtype),
-                attention_kwargs=block_state.attention_kwargs,
-                return_dict=False,
-                **cond_kwargs,
-            )[0]
+            context_name = getattr(guider_state_batch, block_state.guider._identifier_key)
+            with block_state.current_model.cache_context(context_name):
+                guider_state_batch.noise_pred = block_state.current_model(
+                    hidden_states=block_state.latent_model_input.to(block_state.dtype),
+                    timestep=t.expand(block_state.latent_model_input.shape[0]).to(block_state.dtype),
+                    attention_kwargs=block_state.attention_kwargs,
+                    return_dict=False,
+                    **cond_kwargs,
+                )[0]
             block_state.guider.cleanup_models(block_state.current_model)
 
         # Perform guidance

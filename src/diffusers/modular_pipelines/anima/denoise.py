@@ -126,13 +126,15 @@ class AnimaLoopDenoiser(ModularPipelineBlocks):
             cond_kwargs = {
                 key: getattr(guider_state_batch, key).to(block_state.dtype) for key in self._guider_input_fields.keys()
             }
-            guider_state_batch.noise_pred = components.transformer(
-                hidden_states=block_state.latent_model_input,
-                timestep=block_state.timestep,
-                padding_mask=block_state.padding_mask,
-                return_dict=False,
-                **cond_kwargs,
-            )[0]
+            context_name = getattr(guider_state_batch, components.guider._identifier_key)
+            with components.transformer.cache_context(context_name):
+                guider_state_batch.noise_pred = components.transformer(
+                    hidden_states=block_state.latent_model_input,
+                    timestep=block_state.timestep,
+                    padding_mask=block_state.padding_mask,
+                    return_dict=False,
+                    **cond_kwargs,
+                )[0]
             components.guider.cleanup_models(components.transformer)
 
         block_state.noise_pred = components.guider(guider_state)[0]

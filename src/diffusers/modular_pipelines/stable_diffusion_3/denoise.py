@@ -133,14 +133,16 @@ class StableDiffusion3LoopDenoiser(ModularPipelineBlocks):
 
             timestep = t.expand(latent_model_input.shape[0])
 
-            guider_state_batch.noise_pred = components.transformer(
-                hidden_states=latent_model_input,
-                timestep=timestep,
-                encoder_hidden_states=prompt_embeds,
-                pooled_projections=pooled_projections,
-                joint_attention_kwargs=block_state.joint_attention_kwargs,
-                return_dict=False,
-            )[0]
+            context_name = getattr(guider_state_batch, components.guider._identifier_key)
+            with components.transformer.cache_context(context_name):
+                guider_state_batch.noise_pred = components.transformer(
+                    hidden_states=latent_model_input,
+                    timestep=timestep,
+                    encoder_hidden_states=prompt_embeds,
+                    pooled_projections=pooled_projections,
+                    joint_attention_kwargs=block_state.joint_attention_kwargs,
+                    return_dict=False,
+                )[0]
 
             components.guider.cleanup_models(components.transformer)
 
