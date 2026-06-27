@@ -64,12 +64,19 @@ def register_dummy_blocks():
     )
 
 
+def _set_context(model, context_name):
+    for module in model.modules():
+        if hasattr(module, "_diffusers_hook"):
+            module._diffusers_hook._set_context(context_name)
+
+
 def test_first_block_cache_skipping_logic():
     """
     FirstBlockCache skips tail blocks when the first-block residual change is below threshold.
     """
     model = DummyTransformer()
     apply_first_block_cache(model, FirstBlockCacheConfig(threshold=1.0))
+    _set_context(model, "test_context")
 
     # Step 0: Input 10.0 -> Output 40.0 (2 blocks * 2x each). Head residual = 10, tail residual = 20.
     input_t0 = torch.tensor([[[10.0]]])
@@ -88,6 +95,7 @@ def test_first_block_cache_compute_when_residual_changes():
     """A low threshold forces full recomputation when the first-block residual shifts."""
     model = DummyTransformer()
     apply_first_block_cache(model, FirstBlockCacheConfig(threshold=0.01))
+    _set_context(model, "test_context")
 
     model(torch.tensor([[[10.0]]]))
 
@@ -102,6 +110,7 @@ def test_first_block_cache_tuple_outputs():
     """Test compatibility with models returning (hidden, encoder_hidden) like Flux."""
     model = TupleTransformer()
     apply_first_block_cache(model, FirstBlockCacheConfig(threshold=1.0))
+    _set_context(model, "test_context")
 
     input_t0 = torch.tensor([[[10.0]]])
     enc_t0 = torch.tensor([[[1.0]]])
@@ -118,6 +127,7 @@ def test_first_block_cache_first_pass_always_computes():
     """The first forward pass must always run all blocks to populate tail residuals."""
     model = DummyTransformer()
     apply_first_block_cache(model, FirstBlockCacheConfig(threshold=1.0))
+    _set_context(model, "test_context")
 
     input_t0 = torch.tensor([[[5.0]]])
     output_t0 = model(input_t0)
@@ -128,6 +138,7 @@ def test_first_block_cache_large_input_change_recomputes():
     """Large input changes exceed the threshold and trigger full recomputation."""
     model = DummyTransformer()
     apply_first_block_cache(model, FirstBlockCacheConfig(threshold=0.05))
+    _set_context(model, "test_context")
 
     model(torch.tensor([[[10.0]]]))
 
