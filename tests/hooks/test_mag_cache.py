@@ -244,3 +244,35 @@ def test_mag_cache_calibration():
     # Let's ensure list is empty after reset (end of step 1)
     ratios_after = _get_calibration_data(model)
     assert ratios_after == []
+
+
+class SingleBlockDummyTransformer(ModelMixin):
+    def __init__(self):
+        super().__init__()
+        self.transformer_blocks = torch.nn.ModuleList([DummyBlock()])
+
+    def forward(self, hidden_states, encoder_hidden_states=None):
+        for block in self.transformer_blocks:
+            hidden_states = block(hidden_states, encoder_hidden_states=encoder_hidden_states)
+        return hidden_states
+
+
+def test_mag_cache_single_block_step_reset():
+    """Single-block models must advance step_index on cache skips."""
+    model = SingleBlockDummyTransformer()
+    config = MagCacheConfig(
+        threshold=100.0, num_inference_steps=2, retention_ratio=0.0, mag_ratios=np.array([1.0, 1.0])
+    )
+    apply_mag_cache(model, config)
+    _set_context(model, "test_context")
+
+    out0 = model(torch.tensor([[[10.0]]]))
+    assert torch.allclose(out0, torch.tensor([[[20.0]]]))
+
+    out1 = model(torch.tensor([[[11.0]]]))
+    assert torch.allclose(out1, torch.tensor([[[21.0]]]))
+
+    out2 = model(torch.tensor([[[12.0]]]))
+    assert torch.allclose(out2, torch.tensor([[[24.0]]])), (
+        f"Expected compute after reset (24.0), got {out2.item()}"
+    )

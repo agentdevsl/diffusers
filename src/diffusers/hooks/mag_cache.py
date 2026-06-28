@@ -168,12 +168,29 @@ class MagCacheState(BaseState):
         self.calibration_ratios = []
 
 
+def _advance_mag_cache_step(state: MagCacheState, config: MagCacheConfig) -> None:
+    state.step_index += 1
+    if state.step_index >= config.num_inference_steps:
+        if config.calibrate:
+            print("\n[MagCache] Calibration Complete. Copy these values to MagCacheConfig(mag_ratios=...):")
+            print(f"{state.calibration_ratios}\n")
+            logger.info(f"MagCache Calibration Results: {state.calibration_ratios}")
+
+        state.step_index = 0
+        state.accumulated_ratio = 1.0
+        state.accumulated_steps = 0
+        state.accumulated_err = 0.0
+        state.previous_residual = None
+        state.calibration_ratios = []
+
+
 class MagCacheHeadHook(ModelHook):
     _is_stateful = True
 
-    def __init__(self, state_manager: StateManager, config: MagCacheConfig):
+    def __init__(self, state_manager: StateManager, config: MagCacheConfig, advance_on_skip: bool = False):
         self.state_manager = state_manager
         self.config = config
+        self.advance_on_skip = advance_on_skip
         self._metadata = None
 
     def initialize_hook(self, module):
@@ -259,6 +276,9 @@ class MagCacheHeadHook(ModelHook):
                     f"MagCache: Dimension mismatch. Input {output.shape}, Residual {res.shape}. "
                     "Cannot apply residual safely. Returning input without residual."
                 )
+
+            if self.advance_on_skip:
+                _advance_mag_cache_step(state, self.config)
 
             if self._metadata.return_encoder_hidden_states_index is not None:
                 original_encoder_hidden_states = self._metadata._get_parameter_from_args_kwargs(
@@ -377,21 +397,7 @@ class MagCacheBlockHook(ModelHook):
         state.calibration_ratios.append(ratio)
 
     def _advance_step(self, state: MagCacheState):
-        state.step_index += 1
-        if state.step_index >= self.config.num_inference_steps:
-            # End of inference loop
-            if self.config.calibrate:
-                print("\n[MagCache] Calibration Complete. Copy these values to MagCacheConfig(mag_ratios=...):")
-                print(f"{state.calibration_ratios}\n")
-                logger.info(f"MagCache Calibration Results: {state.calibration_ratios}")
-
-            # Reset state
-            state.step_index = 0
-            state.accumulated_ratio = 1.0
-            state.accumulated_steps = 0
-            state.accumulated_err = 0.0
-            state.previous_residual = None
-            state.calibration_ratios = []
+        _advance_mag_cache_step(state, self.config)
 
 
 def apply_mag_cache(module: torch.nn.Module, config: MagCacheConfig) -> None:
@@ -425,7 +431,7 @@ def apply_mag_cache(module: torch.nn.Module, config: MagCacheConfig) -> None:
         name, block = remaining_blocks[0]
         logger.info(f"MagCache: Applying Head+Tail Hooks to single block '{name}'")
         _apply_mag_cache_block_hook(block, state_manager, config, is_tail=True)
-        _apply_mag_cache_head_hook(block, state_manager, config)
+        _apply_mag_cache_head_hook(block, state_manager, config, advance_on_skip=True)
         return
 
     head_block_name, head_block = remaining_blocks.pop(0)
@@ -441,14 +447,16 @@ def apply_mag_cache(module: torch.nn.Module, config: MagCacheConfig) -> None:
     _apply_mag_cache_block_hook(tail_block, state_manager, config, is_tail=True)
 
 
-def _apply_mag_cache_head_hook(block: torch.nn.Module, state_manager: StateManager, config: MagCacheConfig) -> None:
+def _apply_mag_cache_head_hook(
+    block: torch.nn.Module, state_manager: StateManager, config: MagCacheConfig, advance_on_skip: bool = False
+) -> None:
     registry = HookRegistry.check_if_exists_or_initialize(block)
 
     # Automatically remove existing hook to allow re-application (e.g. switching modes)
     if registry.get_hook(_MAG_CACHE_LEADER_BLOCK_HOOK) is not None:
         registry.remove_hook(_MAG_CACHE_LEADER_BLOCK_HOOK)
 
-    hook = MagCacheHeadHook(state_manager, config)
+    hook = MagCacheHeadHook(state_manager, config, advance_on_skip=advance_on_skip)
     registry.register_hook(hook, _MAG_CACHE_LEADER_BLOCK_HOOK)
 
 
