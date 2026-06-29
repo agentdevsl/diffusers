@@ -145,12 +145,13 @@ class SmoothedEnergyGuidance(BaseGuidance):
         self._seg_layer_hook_names = [f"SmoothedEnergyGuidance_{i}" for i in range(len(self.seg_guidance_config))]
 
     def prepare_models(self, denoiser: torch.nn.Module) -> None:
-        if self._is_seg_enabled() and self.is_conditional and self._count_prepared > 1:
+        self._count_prepared += 1
+        if self._should_apply_seg_hooks():
             for name, config in zip(self._seg_layer_hook_names, self.seg_guidance_config):
                 _apply_smoothed_energy_guidance_hook(denoiser, config, self.seg_blur_sigma, name=name)
 
     def cleanup_models(self, denoiser: torch.nn.Module):
-        if self._is_seg_enabled() and self.is_conditional and self._count_prepared > 1:
+        if self._should_apply_seg_hooks():
             registry = HookRegistry.check_if_exists_or_initialize(denoiser)
             # Remove the hooks after inference
             for hook_name in self._seg_layer_hook_names:
@@ -226,6 +227,13 @@ class SmoothedEnergyGuidance(BaseGuidance):
     @property
     def is_conditional(self) -> bool:
         return self._count_prepared == 1 or self._count_prepared == 3
+
+    def _should_apply_seg_hooks(self) -> bool:
+        if not self._is_seg_enabled():
+            return False
+        if self._is_cfg_enabled():
+            return self._count_prepared == 3
+        return self._count_prepared == 2
 
     @property
     def num_conditions(self) -> int:

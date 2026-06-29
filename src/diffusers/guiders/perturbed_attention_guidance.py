@@ -158,13 +158,13 @@ class PerturbedAttentionGuidance(BaseGuidance):
     # Copied from diffusers.guiders.skip_layer_guidance.SkipLayerGuidance.prepare_models
     def prepare_models(self, denoiser: torch.nn.Module) -> None:
         self._count_prepared += 1
-        if self._is_slg_enabled() and self.is_conditional and self._count_prepared > 1:
+        if self._should_apply_skip_hooks():
             for name, config in zip(self._skip_layer_hook_names, self.skip_layer_config):
                 _apply_layer_skip_hook(denoiser, config, name=name)
 
     # Copied from diffusers.guiders.skip_layer_guidance.SkipLayerGuidance.cleanup_models
     def cleanup_models(self, denoiser: torch.nn.Module) -> None:
-        if self._is_slg_enabled() and self.is_conditional and self._count_prepared > 1:
+        if self._should_apply_skip_hooks():
             registry = HookRegistry.check_if_exists_or_initialize(denoiser)
             # Remove the hooks after inference
             for hook_name in self._skip_layer_hook_names:
@@ -243,6 +243,14 @@ class PerturbedAttentionGuidance(BaseGuidance):
     # Copied from diffusers.guiders.skip_layer_guidance.SkipLayerGuidance.is_conditional
     def is_conditional(self) -> bool:
         return self._count_prepared == 1 or self._count_prepared == 3
+
+    # Copied from diffusers.guiders.skip_layer_guidance.SkipLayerGuidance._should_apply_skip_hooks
+    def _should_apply_skip_hooks(self) -> bool:
+        if not self._is_slg_enabled():
+            return False
+        if self._is_cfg_enabled():
+            return self._count_prepared == 3
+        return self._count_prepared == 2
 
     @property
     # Copied from diffusers.guiders.skip_layer_guidance.SkipLayerGuidance.num_conditions
