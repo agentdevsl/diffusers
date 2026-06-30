@@ -27,7 +27,7 @@ from ._common import (
     _SPATIAL_TRANSFORMER_BLOCK_IDENTIFIERS,
     _TEMPORAL_TRANSFORMER_BLOCK_IDENTIFIERS,
 )
-from .hooks import HookRegistry, ModelHook
+from .hooks import BaseState, HookRegistry, ModelHook, StateManager
 
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -105,7 +105,7 @@ class PyramidAttentionBroadcastConfig:
         )
 
 
-class PyramidAttentionBroadcastState:
+class PyramidAttentionBroadcastState(BaseState):
     r"""
     State for Pyramid Attention Broadcast.
 
@@ -148,33 +148,34 @@ class PyramidAttentionBroadcastHook(ModelHook):
         self.timestep_skip_range = timestep_skip_range
         self.block_skip_range = block_skip_range
         self.current_timestep_callback = current_timestep_callback
-
-    def initialize_hook(self, module):
-        self.state = PyramidAttentionBroadcastState()
-        return module
+        self.state_manager = StateManager(PyramidAttentionBroadcastState, (), {})
 
     def new_forward(self, module: torch.nn.Module, *args, **kwargs) -> Any:
+        if self.state_manager._current_context is None:
+            self.state_manager.set_context("inference")
+
+        state = self.state_manager.get_state()
         is_within_timestep_range = (
             self.timestep_skip_range[0] < self.current_timestep_callback() < self.timestep_skip_range[1]
         )
         should_compute_attention = (
-            self.state.cache is None
-            or self.state.iteration == 0
+            state.cache is None
+            or state.iteration == 0
             or not is_within_timestep_range
-            or self.state.iteration % self.block_skip_range == 0
+            or state.iteration % self.block_skip_range == 0
         )
 
         if should_compute_attention:
             output = self.fn_ref.original_forward(*args, **kwargs)
         else:
-            output = self.state.cache
+            output = state.cache
 
-        self.state.cache = output
-        self.state.iteration += 1
+        state.cache = output
+        state.iteration += 1
         return output
 
     def reset_state(self, module: torch.nn.Module) -> None:
-        self.state.reset()
+        self.state_manager.reset()
         return module
 
 

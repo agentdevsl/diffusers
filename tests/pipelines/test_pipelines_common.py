@@ -2691,7 +2691,11 @@ class PyramidAttentionBroadcastTesterMixin:
                     isinstance(hook, PyramidAttentionBroadcastHook),
                     "Hook should be of type PyramidAttentionBroadcastHook.",
                 )
-                self.assertTrue(hook.state.cache is None, "Cache should be None at initialization.")
+                self.assertEqual(
+                    len(hook.state_manager._state_cache),
+                    0,
+                    "Cache should be None at initialization.",
+                )
         self.assertEqual(count, expected_hooks, "Number of hooks should match the expected number.")
 
         # Perform dummy inference step to ensure state is updated
@@ -2701,12 +2705,13 @@ class PyramidAttentionBroadcastTesterMixin:
                     hook = module._diffusers_hook.get_hook("pyramid_attention_broadcast")
                     if hook is None:
                         continue
+                    state = hook.state_manager.get_state()
                     self.assertTrue(
-                        hook.state.cache is not None,
+                        state.cache is not None,
                         "Cache should have updated during inference.",
                     )
                     self.assertTrue(
-                        hook.state.iteration == i + 1,
+                        state.iteration == i + 1,
                         "Hook iteration state should have updated during inference.",
                     )
             return {}
@@ -2722,13 +2727,10 @@ class PyramidAttentionBroadcastTesterMixin:
                 hook = module._diffusers_hook.get_hook("pyramid_attention_broadcast")
                 if hook is None:
                     continue
-                self.assertTrue(
-                    hook.state.cache is None,
+                self.assertEqual(
+                    len(hook.state_manager._state_cache),
+                    0,
                     "Cache should be reset to None after inference.",
-                )
-                self.assertTrue(
-                    hook.state.iteration == 0,
-                    "Iteration should be reset to 0 after inference.",
                 )
 
     def test_pyramid_attention_broadcast_inference(self, expected_atol: float = 0.2):
