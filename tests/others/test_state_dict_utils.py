@@ -135,3 +135,30 @@ class StateDictUtilsTest(unittest.TestCase):
         alpha_keys = [key for key in kohya if key.endswith(".alpha")]
         self.assertEqual(len(alpha_keys), 1)
         self.assertEqual(kohya[alpha_keys[0]].item(), len(down_weight))
+
+    def test_convert_state_dict_to_peft_unsupported_type_raises(self):
+        state_dict = {"layer.weight": torch.ones(2, 2)}
+        with self.assertRaises(ValueError):
+            convert_state_dict_to_peft(state_dict, original_type=StateDictType.PEFT)
+
+    def test_peft_unet_round_trip_preserves_weight_values(self):
+        weight_a = torch.randn(2, 4)
+        weight_b = torch.randn(4, 2)
+        peft_state_dict = {
+            "unet.down_blocks.0.attentions.0.to_q.lora_A.weight": weight_a.clone(),
+            "unet.down_blocks.0.attentions.0.to_q.lora_B.weight": weight_b.clone(),
+        }
+        diffusers_state_dict = convert_state_dict_to_diffusers(peft_state_dict, original_type=StateDictType.PEFT)
+        self.assertIn("unet.down_blocks.0.attentions.0.to_q.lora.down.weight", diffusers_state_dict)
+        self.assertTrue(
+            torch.allclose(
+                diffusers_state_dict["unet.down_blocks.0.attentions.0.to_q.lora.down.weight"],
+                weight_a,
+            )
+        )
+        self.assertTrue(
+            torch.allclose(
+                diffusers_state_dict["unet.down_blocks.0.attentions.0.to_q.lora.up.weight"],
+                weight_b,
+            )
+        )
