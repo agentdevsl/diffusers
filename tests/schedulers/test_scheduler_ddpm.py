@@ -72,6 +72,18 @@ class DDPMSchedulerTest(SchedulerCommonTest):
         for rescale_betas_zero_snr in [True, False]:
             self.check_over_configs(rescale_betas_zero_snr=rescale_betas_zero_snr)
 
+    def test_set_timesteps_num_inference_steps_exceeds_train_timesteps_raises(self):
+        scheduler_class = self.scheduler_classes[0]
+        scheduler = scheduler_class(**self.get_scheduler_config())
+        with self.assertRaises(ValueError):
+            scheduler.set_timesteps(scheduler.config.num_train_timesteps + 1)
+
+    def test_set_timesteps_num_inference_steps_at_limit_succeeds(self):
+        scheduler_class = self.scheduler_classes[0]
+        scheduler = scheduler_class(**self.get_scheduler_config())
+        scheduler.set_timesteps(scheduler.config.num_train_timesteps)
+        self.assertEqual(scheduler.num_inference_steps, scheduler.config.num_train_timesteps)
+
     def test_full_loop_no_noise(self):
         scheduler_class = self.scheduler_classes[0]
         scheduler_config = self.get_scheduler_config()

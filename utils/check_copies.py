@@ -18,6 +18,7 @@ import glob
 import os
 import re
 import subprocess
+import sys
 
 
 # All paths are set with the intent you should run this script from the root of the repo with the command
@@ -94,10 +95,22 @@ def get_indent(code):
 
 
 def run_ruff(code):
-    command = ["ruff", "format", "-", "--config", "pyproject.toml", "--silent"]
+    command = [sys.executable, "-m", "ruff", "format", "-", "--config", "pyproject.toml", "--silent"]
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
     stdout, _ = process.communicate(input=code.encode())
     return stdout.decode()
+
+
+def _get_definition_header(lines, start_index):
+    idx = start_index
+    while idx < len(lines):
+        stripped = lines[idx].strip()
+        if stripped.startswith(("def ", "class ", "@dataclass")):
+            return lines[idx]
+        if stripped and not stripped.startswith("#") and not stripped.startswith("@"):
+            break
+        idx += 1
+    return lines[start_index - 1] if start_index > 0 else ""
 
 
 def stylify(code: str) -> str:
@@ -176,16 +189,24 @@ def is_copy_consistent(filename, overwrite=False):
                     theoretical_code = re.sub(obj1.upper(), obj2.upper(), theoretical_code)
 
             # stylify after replacement. To be able to do that, we need the header (class or function definition)
-            # from the previous line
-            theoretical_code = stylify(lines[start_index - 1] + theoretical_code)
-            theoretical_code = theoretical_code[len(lines[start_index - 1]) :]
+            # from the copied block, not the `# Copied from` comment line.
+            header_line = _get_definition_header(lines, start_index)
+            theoretical_code = stylify(header_line + theoretical_code)
+            theoretical_code = theoretical_code[len(header_line) :]
+            observed_code = stylify(header_line + observed_code)
+            observed_code = observed_code[len(header_line) :]
 
         # Test for a diff and act accordingly.
         if observed_code != theoretical_code:
             diffs.append([object_name, start_index])
             if overwrite:
-                lines = lines[:start_index] + [theoretical_code] + lines[line_index:]
-                line_index = start_index + 1
+                replacement_lines = theoretical_code.splitlines(keepends=True)
+                if replacement_lines and not replacement_lines[-1].endswith("\n"):
+                    replacement_lines[-1] += "\n"
+                if lines[start_index].strip().startswith(("def ", "class ")):
+                    replacement_lines = [lines[start_index]] + replacement_lines
+                lines = lines[:start_index] + replacement_lines + lines[line_index:]
+                line_index = start_index + len(replacement_lines)
 
     if overwrite and len(diffs) > 0:
         # Warn the user a file has been modified.
