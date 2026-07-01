@@ -233,6 +233,9 @@ class TaylorSeerCacheHook(ModelHook):
         return should_compute, state
 
     def new_forward(self, module: torch.nn.Module, *args, **kwargs):
+        if self.state_manager._current_context is None:
+            self.state_manager.set_context("inference")
+
         should_compute, state = self._measure_should_compute()
         if should_compute:
             outputs = self.fn_ref.original_forward(*args, **kwargs)

@@ -76,6 +76,9 @@ class FBCHeadBlockHook(ModelHook):
         return module
 
     def new_forward(self, module: torch.nn.Module, *args, **kwargs):
+        if self.state_manager._current_context is None:
+            self.state_manager.set_context("inference")
+
         original_hidden_states = self._metadata._get_parameter_from_args_kwargs("hidden_states", args, kwargs)
 
         output = self.fn_ref.original_forward(*args, **kwargs)
@@ -155,6 +158,9 @@ class FBCBlockHook(ModelHook):
         return module
 
     def new_forward(self, module: torch.nn.Module, *args, **kwargs):
+        if self.state_manager._current_context is None:
+            self.state_manager.set_context("inference")
+
         original_hidden_states = self._metadata._get_parameter_from_args_kwargs("hidden_states", args, kwargs)
         original_encoder_hidden_states = None
         if self._metadata.return_encoder_hidden_states_index is not None:

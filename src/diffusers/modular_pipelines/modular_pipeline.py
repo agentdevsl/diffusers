@@ -2249,6 +2249,11 @@ class ModularPipeline(ConfigMixin, PushToHubMixin):
         # return only components we've actually set as attributes on self
         return {name: getattr(self, name) for name in self._component_specs.keys() if hasattr(self, name)}
 
+    def _reset_stateful_caches(self) -> None:
+        for component in self.components.values():
+            if hasattr(component, "_reset_stateful_cache"):
+                component._reset_stateful_cache()
+
     def get_component_spec(self, name: str) -> ComponentSpec:
         """
         Returns:
@@ -2835,6 +2840,8 @@ class ModularPipeline(ConfigMixin, PushToHubMixin):
                 error_msg = f"Error in block: ({self._blocks.__class__.__name__}):\n"
                 logger.error(error_msg)
                 raise
+            finally:
+                self._reset_stateful_caches()
 
         if output is None:
             return state
