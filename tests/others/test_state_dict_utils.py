@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import patch
 
 import torch
 
@@ -93,6 +94,17 @@ class StateDictUtilsTest(unittest.TestCase):
         }
         converted = convert_all_state_dict_to_peft(state_dict)
         self.assertTrue(any("lora_A" in key or "lora_B" in key for key in converted))
+
+    def test_convert_all_state_dict_to_peft_raises_when_conversion_produces_no_lora_keys(self):
+        state_dict = {"layer.weight": torch.ones(2, 2)}
+        with self.assertRaisesRegex(ValueError, "Your LoRA was not converted to PEFT"):
+            convert_all_state_dict_to_peft(state_dict)
+
+    @patch("diffusers.utils.state_dict_utils.convert_state_dict_to_peft")
+    def test_convert_all_state_dict_to_peft_reraises_non_infer_errors(self, mock_convert):
+        mock_convert.side_effect = ValueError("Some other error")
+        with self.assertRaisesRegex(ValueError, "Some other error"):
+            convert_all_state_dict_to_peft({"layer.weight": torch.ones(2, 2)})
 
     def test_state_dict_all_zero(self):
         state_dict = {

@@ -231,3 +231,32 @@ class LTXI2VLongMultiPromptPipelineFastTests(unittest.TestCase):
                 num_inference_steps=1,
                 output_type="latent",
             )
+
+    def test_inference_latent_output_multi_window_with_overlap(self):
+        device = torch_device
+        pipe = LTXI2VLongMultiPromptPipeline(**self.get_dummy_components())
+        pipe.to(device)
+
+        generator = torch.Generator(device=device).manual_seed(0)
+        output = pipe(
+            prompt="segment one | segment two | segment three",
+            generator=generator,
+            num_inference_steps=2,
+            height=32,
+            width=32,
+            num_frames=25,
+            temporal_tile_size=16,
+            temporal_overlap=8,
+            guidance_scale=1.0,
+            output_type="latent",
+            max_sequence_length=16,
+        )
+
+        frames = output.frames
+        expected_latent_frames = (25 - 1) // pipe.vae_temporal_compression_ratio + 1
+        self.assertIsInstance(frames, torch.Tensor)
+        self.assertEqual(frames.ndim, 5)
+        self.assertEqual(frames.shape[0], 1)
+        self.assertEqual(frames.shape[2], expected_latent_frames)
+        self.assertEqual(frames.shape[3], 32 // pipe.vae_spatial_compression_ratio)
+        self.assertEqual(frames.shape[4], 32 // pipe.vae_spatial_compression_ratio)
